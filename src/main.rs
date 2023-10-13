@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::fs::File;
 
-const TELEMETRY_PACKET_SIZE: usize = 16;
+const TELEMETRY_PACKET_SIZE: usize = 32;
 
 fn main() {
     let pipe_path = "/tmp/sub_tlm_socket";
@@ -43,9 +43,9 @@ pub struct EnvironmentTelemetry {
 impl EnvironmentTelemetry {
     fn deserialize(buffer: &[u8; TELEMETRY_PACKET_SIZE]) -> Self {
        Self {
-           internal_temperature_c: buffer[1],
-           internal_humidity_percent: buffer[2],
-           is_stale: buffer[3] < 1,
+           internal_temperature_c: buffer[0],
+           internal_humidity_percent: buffer[1],
+           is_stale: buffer[2] < 1,
        } 
     }
 }
