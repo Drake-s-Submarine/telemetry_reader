@@ -16,21 +16,38 @@ fn read_pipe(pipe: &mut File) {
     let mut buf = [0; TELEMETRY_PACKET_SIZE];
 
     let len = pipe.read(&mut buf).unwrap();
+    let tick_count = extract_tick_count(&buf);
 
     if len < 1 { return; }
 
     match buf[len - 1] {
         0x0 => { 
             let packet = EnvironmentTelemetry::deserialize(&buf);
-            println!("{:?}{}", packet, len);
+            println!("{:?}{}", packet, tick_count);
+        },
+
+        0x1 => {
+            let packet = BallastTelemetry::deserialize(&buf);
+            println!("{:?}{}", packet, tick_count);
         },
 
         0xF => {
             let packet = SystemTelemetry::deserialize(&buf);
-            println!("{:?}", packet);
+            println!("{:?}{}", packet, tick_count);
         },
         _ => eprintln!("Back packet ID: {}", buf[len-1]),
     };
+}
+
+fn extract_tick_count(buffer: &[u8; TELEMETRY_PACKET_SIZE]) -> u32 {
+    let tick: [u8; 4] = [
+        buffer[TELEMETRY_PACKET_SIZE - 5],
+        buffer[TELEMETRY_PACKET_SIZE - 4],
+        buffer[TELEMETRY_PACKET_SIZE - 3],
+        buffer[TELEMETRY_PACKET_SIZE - 2],
+    ];
+
+    u32::from_le_bytes(tick)
 }
 
 #[derive(Debug)]
@@ -82,6 +99,21 @@ impl SystemTelemetry {
             tick_delta: u32::from_le_bytes(delta),
             tick_idle_time: u32::from_le_bytes(idle),
             total_tick_time: u32::from_le_bytes(total),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BallastTelemetry {
+    pub current_state: u8,
+    pub target_state: u8,
+}
+
+impl BallastTelemetry {
+    fn deserialize(buffer: &[u8; TELEMETRY_PACKET_SIZE]) -> Self {
+        Self {
+            current_state: buffer[0],
+            target_state: buffer[1]
         }
     }
 }
